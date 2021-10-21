@@ -8,6 +8,7 @@
 
 namespace fast {
 
+    // Used as a trick since Pipeline::parse doesn't accept data objects, just process objects for now..
     class EmptyProcessObject : public ProcessObject {
         FAST_OBJECT_V4(EmptyProcessObject)
         public:
@@ -25,6 +26,7 @@ namespace fast {
         mIsModified = true;
     };
 
+    // Make a tiny GUI
     class GUI : public Window {
         FAST_OBJECT(GUI)
     public:
@@ -32,44 +34,53 @@ namespace fast {
     private:
     };
 
+    // Function for loading a test WSI
     static ImagePyramid::pointer loadWSI() {
         auto importer = WholeSlideImageImporter::create(Config::getTestDataPath() + "WSI/A05.svs");
         return importer->runAndGetOutputData<ImagePyramid>();
     }
 
     GUI::GUI() {
+        // Create GUI
         auto layout = new QVBoxLayout;
         mWidget->setLayout(layout);
 
-        // Load two WSIs
-        std::vector<ImagePyramid::pointer> WSIs = {loadWSI(), loadWSI()};
-
+        // Initial empty view
         auto view = createView();
         view->setSynchronizedRendering(false);
         layout->addWidget(view);
 
+        // Load two WSIs
+        std::vector<ImagePyramid::pointer> WSIs = {loadWSI(), loadWSI()};
+
+        // A button to trigger event
         auto button = new QPushButton;
         button->setText("Click me!");
         layout->addWidget(button);
-        int counter = 0;
+
+        int counter = 0; // Used to switch between the two WSIs
+
+        // Every time the button is clicked:
         QObject::connect(button, &QPushButton::clicked, [this, layout, &counter, WSIs]() {
+            // Get old view, and remove it from Widget
             auto oldView = getView(0);
             mWidget->clearViews();
 
+            // Load pipeline and give it a WSI
             auto pipeline = Pipeline(std::string(ROOT_DIR) + "/wsi_patch_segmentation.fpl");
+            // parse() only accepts POs for now, so use EmptyProcessObject to give it the WSI
             auto po = EmptyProcessObject::create(WSIs[counter % 2]);
             pipeline.parse({{"WSI", po}});
             ++counter;
-            //stopComputationThread();
+            // Get all views (although we only have one in this case..)
             for(auto view : pipeline.getViews()) {
-                view->setSynchronizedRendering(false);
-                layout->replaceWidget(oldView, view);
-                mWidget->addView(view);
+                view->setSynchronizedRendering(false); // Disable synchronized rendering
+                layout->replaceWidget(oldView, view); // Replace new view with old view in Qt GUI
+                mWidget->addView(view); // Give new view to mWidget so it is used in the computation thread
             }
-            // Stop old view and delete it!
+            // Stop any pipelines running in old view and delete it!
             oldView->stopPipeline();
             delete oldView;
-            //startComputationThread();
         });
     }
 }
@@ -77,6 +88,7 @@ namespace fast {
 using namespace fast;
 
 int main(int argc, char** argv) {
+    // Just start the GUI application
     CommandLineParser parser("");
     parser.parse(argc, argv);
     auto gui = GUI::create();
