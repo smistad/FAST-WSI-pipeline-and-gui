@@ -7,9 +7,9 @@ ProcessObject segmentation TissueSegmentation
 Input 0 WSI 0
 
 ProcessObject patch PatchGenerator
-Attribute patch-size 256 256
-Attribute patch-level 0
-Attribute patch-overlap 0.1
+Attribute patch-size 512 512
+Attribute patch-level 1
+Attribute patch-overlap 0
 Input 0 WSI 0
 Input 1 segmentation 0
 
