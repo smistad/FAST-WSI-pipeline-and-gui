@@ -3,17 +3,14 @@ PipelineDescription "asd"
 
 ### Processing chain
 
-ProcessObject importer WholeSlideImageImporter
-Attribute filename $TEST_DATA_PATH$/WSI/A05.svs
-
 ProcessObject segmentation TissueSegmentation
-Input 0 importer 0
+Input 0 WSI 0
 
 ProcessObject patch PatchGenerator
 Attribute patch-size 256 256
 Attribute patch-level 0
 Attribute patch-overlap 0.1
-Input 0 importer 0
+Input 0 WSI 0
 Input 1 segmentation 0
 
 ProcessObject segmentation BinaryThresholding
@@ -26,7 +23,7 @@ Input 0 segmentation 0
 ### Renderers
 
 Renderer imgRenderer ImagePyramidRenderer
-Input 0 importer 0
+Input 0 WSI 0
 
 Renderer segRenderer SegmentationRenderer
 Attribute opacity 0.5
