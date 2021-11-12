@@ -30,7 +30,8 @@ namespace fast {
     class GUI : public Window {
         FAST_OBJECT(GUI)
     public:
-        FAST_CONSTRUCTOR(GUI)
+        FAST_CONSTRUCTOR(GUI);
+		int m_counter = 0;// Used to switch between the two WSIs
     private:
     };
 
@@ -58,10 +59,8 @@ namespace fast {
         button->setText("Click me!");
         layout->addWidget(button);
 
-        int counter = 0; // Used to switch between the two WSIs
-
         // Every time the button is clicked:
-        QObject::connect(button, &QPushButton::clicked, [this, layout, &counter, WSIs]() {
+        QObject::connect(button, &QPushButton::clicked, [this, WSIs]() {
             // Get old view, and remove it from Widget
             auto oldView = getView(0);
             oldView->stopPipeline();
@@ -70,11 +69,14 @@ namespace fast {
             // Load pipeline and give it a WSI
             std::cout << "Loading pipeline.. thread:" << std::this_thread::get_id() << std::endl;
             auto pipeline = Pipeline(std::string(ROOT_DIR) + "/wsi_patch_segmentation.fpl");
+            std::cout << "OK" << std::endl;
             // parse() only accepts POs for now, so use EmptyProcessObject to give it the WSI
-            auto po = EmptyProcessObject::create(WSIs[counter % 2]);
+            std::cout << "Counter: " << m_counter % 2 << " " << WSIs.size() << std::endl;
+            auto po = EmptyProcessObject::create(WSIs[m_counter % 2]);
+            std::cout << "OK" << std::endl;
             pipeline.parse({{"WSI", po}});
             std::cout << "Done" << std::endl;
-            ++counter;
+            ++m_counter;
             // Get all renderers
             for(auto renderer : pipeline.getRenderers()) {
                 renderer->setSynchronizedRendering(false); // Disable synchronized rendering
