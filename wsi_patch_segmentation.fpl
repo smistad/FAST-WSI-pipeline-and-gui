@@ -32,6 +32,6 @@ Input 0 stitcher 0
 
 ### Views
 
-View view1 imgRenderer segRenderer
-Attribute 2Dmode true
-Attribute background-color white
+#View view1 imgRenderer segRenderer
+#Attribute 2Dmode true
+#Attribute background-color white

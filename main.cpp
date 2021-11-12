@@ -64,23 +64,25 @@ namespace fast {
         QObject::connect(button, &QPushButton::clicked, [this, layout, &counter, WSIs]() {
             // Get old view, and remove it from Widget
             auto oldView = getView(0);
-            mWidget->clearViews();
+            oldView->stopPipeline();
+            oldView->removeAllRenderers();
 
             // Load pipeline and give it a WSI
+            std::cout << "Loading pipeline.. thread:" << std::this_thread::get_id() << std::endl;
             auto pipeline = Pipeline(std::string(ROOT_DIR) + "/wsi_patch_segmentation.fpl");
             // parse() only accepts POs for now, so use EmptyProcessObject to give it the WSI
             auto po = EmptyProcessObject::create(WSIs[counter % 2]);
             pipeline.parse({{"WSI", po}});
+            std::cout << "Done" << std::endl;
             ++counter;
-            // Get all views (although we only have one in this case..)
-            for(auto view : pipeline.getViews()) {
-                view->setSynchronizedRendering(false); // Disable synchronized rendering
-                layout->replaceWidget(oldView, view); // Replace new view with old view in Qt GUI
-                mWidget->addView(view); // Give new view to mWidget so it is used in the computation thread
+            // Get all renderers
+            for(auto renderer : pipeline.getRenderers()) {
+                renderer->setSynchronizedRendering(false); // Disable synchronized rendering
             }
-            // Stop any pipelines running in old view and delete it!
-            oldView->stopPipeline();
-            delete oldView;
+            for(auto renderer : pipeline.getRenderers()) {
+                oldView->addRenderer(renderer);
+            }
+            oldView->reinitialize();
         });
     }
 }
