@@ -72,9 +72,8 @@ namespace fast {
             std::cout << "OK" << std::endl;
             // parse() only accepts POs for now, so use EmptyProcessObject to give it the WSI
             std::cout << "Counter: " << m_counter % 2 << " " << WSIs.size() << std::endl;
-            auto po = EmptyProcessObject::create(WSIs[m_counter % 2]);
             std::cout << "OK" << std::endl;
-            pipeline.parse({{"WSI", po}});
+            pipeline.parse({{"WSI", WSIs[m_counter % 2]}});
             std::cout << "Done" << std::endl;
             ++m_counter;
             // Get all renderers

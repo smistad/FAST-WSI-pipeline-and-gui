@@ -1,16 +1,17 @@
 PipelineName "Neural network WSI segmentation"
-PipelineDescription "asd"
+PipelineDescription "Simple demo pipeline of patch-wise segmentation of a WSI"
+PipelineInputData WSI "Whole-slide image"
 
 ### Processing chain
 
 ProcessObject segmentation TissueSegmentation
-Input 0 WSI 0
+Input 0 WSI
 
 ProcessObject patch PatchGenerator
 Attribute patch-size 512 512
 Attribute patch-level 1
 Attribute patch-overlap 0
-Input 0 WSI 0
+Input 0 WSI
 Input 1 segmentation 0
 
 ProcessObject segmentation BinaryThresholding
@@ -23,7 +24,7 @@ Input 0 segmentation 0
 ### Renderers
 
 Renderer imgRenderer ImagePyramidRenderer
-Input 0 WSI 0
+Input 0 WSI
 
 Renderer segRenderer SegmentationRenderer
 Attribute opacity 0.5
