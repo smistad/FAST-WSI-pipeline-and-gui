@@ -35,6 +35,7 @@ namespace fast {
         // Create GUI
         auto layout = new QVBoxLayout;
         mWidget->setLayout(layout);
+        setHeight(getScreenHeight());
 
         // Initial empty view
         auto view = createView();
@@ -53,22 +54,14 @@ namespace fast {
             QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::selectWSI, this, i));
         }
 
-        // A set of pipeliens and one button for each.
-        std::vector<std::string> pipelines = {
-            std::string(ROOT_DIR) + "/pipelines/wsi_patch_segmentation.fpl",
-            std::string(ROOT_DIR) + "/pipelines/nuclei_seg_stream_wsi.fpl",
-            std::string(ROOT_DIR) + "/pipelines/bach-pw-classification-mobilenetv2.fpl",
-            std::string(ROOT_DIR) + "/pipelines/CD3_UNET_256.fpl",
-            std::string(ROOT_DIR) + "/pipelines/object_detection_nuclei_tiny_yolo_v3.fpl",
-            std::string(ROOT_DIR) + "/pipelines/wsi_p2.fpl",
-        };
-
-        for(int i = 0; i < pipelines.size(); ++i){
+        // Load pipelines and create one button for each.
+        std::string pipelineFolder = std::string(ROOT_DIR) + "/pipelines/";
+        for(auto& filename : getDirectoryList(pipelineFolder)) {
             auto button = new QPushButton;
-            auto pipeline = Pipeline(pipelines[i]);
+            auto pipeline = Pipeline(join(pipelineFolder, filename));
             button->setText(("Run pipeline: " + pipeline.getName()).c_str());
             layout->addWidget(button);
-            QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::processPipeline, this, pipelines[i]));
+            QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::processPipeline, this, join(pipelineFolder, filename)));
         }
 
         // Stop button

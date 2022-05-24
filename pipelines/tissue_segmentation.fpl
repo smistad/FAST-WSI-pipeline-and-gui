@@ -1,0 +1,17 @@
+PipelineName "Tissue segmentation"
+PipelineDescription "Tissue segmentation"
+PipelineInputData WSI "Whole-slide image"
+
+### Processing chain
+
+ProcessObject segmentation TissueSegmentation
+Input 0 WSI
+
+### Renderers
+
+Renderer imgRenderer ImagePyramidRenderer
+Input 0 WSI
+
+Renderer segRenderer SegmentationRenderer
+Attribute opacity 0.5
+Input 0 segmentation 0

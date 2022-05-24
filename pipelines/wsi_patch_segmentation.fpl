@@ -1,4 +1,4 @@
-PipelineName "Neural network WSI segmentation"
+PipelineName "Dummy"
 PipelineDescription "Simple demo pipeline of patch-wise segmentation of a WSI"
 PipelineInputData WSI "Whole-slide image"
 
@@ -30,9 +30,3 @@ Renderer segRenderer SegmentationRenderer
 Attribute opacity 0.5
 #Attribute label-colors "1" "red" "2" "blue"
 Input 0 stitcher 0
-
-### Views
-
-#View view1 imgRenderer segRenderer
-#Attribute 2Dmode true
-#Attribute background-color white

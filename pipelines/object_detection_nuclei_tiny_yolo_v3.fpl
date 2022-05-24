@@ -1,0 +1,36 @@
+PipelineName "Nuclei bounding box detection"
+PipelineDescription "asd"
+
+### Processing chain
+ProcessObject tissueSeg TissueSegmentation
+Attribute threshold 85
+Input 0 WSI
+
+ProcessObject patch PatchGenerator
+Attribute patch-size 256 256
+Attribute patch-level 0
+Attribute patch-overlap 0.0
+Attribute mask-threshold 0.01
+Input 0 WSI
+Input 1 tissueSeg 0
+
+ProcessObject network BoundingBoxNetwork
+Attribute anchors 10,10,18,17,19,26;28,21,30,31,39,43
+Attribute scale-factor 0.00392156862
+Attribute model "$CURRENT_PATH$/../models/object_detection_nuclei_tiny_yolo_v3.xml"
+Input 0 patch 0
+
+ProcessObject nms NonMaximumSuppression
+Attribute threshold 0.4
+Input 0 network 0
+
+ProcessObject boxAccum BoundingBoxSetAccumulator
+Input 0 nms 0
+
+### Renderers
+Renderer imgRenderer ImagePyramidRenderer
+Input 0 WSI
+
+Renderer boxRenderer BoundingBoxRenderer
+Input 0 boxAccum 0
+
