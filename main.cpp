@@ -65,7 +65,8 @@ namespace fast {
 
         for(int i = 0; i < pipelines.size(); ++i){
             auto button = new QPushButton;
-            button->setText("Process with pipeline " + QString::number(i));
+            auto pipeline = Pipeline(pipelines[i]);
+            button->setText(("Run pipeline: " + pipeline.getName()).c_str());
             layout->addWidget(button);
             QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::processPipeline, this, pipelines[i]));
         }
