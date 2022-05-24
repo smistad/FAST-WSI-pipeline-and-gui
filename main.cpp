@@ -142,7 +142,6 @@ namespace fast {
         std::cout << "Loading pipeline.. thread: " << std::this_thread::get_id() << std::endl;
         m_runningPipeline = std::make_unique<Pipeline>(pipelinePath);
         std::cout << "OK" << std::endl;
-        // parse() only accepts POs for now, so use EmptyProcessObject to give it the WSI
         std::cout << "OK" << std::endl;
         try {
             m_runningPipeline->parse({{"WSI", m_WSIs[m_currentWSI]}});
@@ -163,7 +162,6 @@ namespace fast {
             view->addRenderer(renderer);
         }
         view->reinitialize();
-        //compThread->start();
         getComputationThread()->reset();
     }
 
