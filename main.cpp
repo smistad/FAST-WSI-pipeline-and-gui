@@ -19,6 +19,7 @@ namespace fast {
 		void stopProcessing();
         void selectWSI(int i);
 		void processPipeline(std::string pipelinePath);
+		void batchProcessPipeline(std::string pipelinePath);
     private:
         std::vector<ImagePyramid::pointer> m_WSIs;
         int m_currentWSI = 0;
@@ -37,9 +38,18 @@ namespace fast {
         mWidget->setLayout(layout);
         setHeight(getScreenHeight());
 
-        // Initial empty view
+        // Create view
         auto view = createView();
         layout->addWidget(view);
+
+        auto bottomLayout = new QHBoxLayout;
+        layout->addLayout(bottomLayout);
+
+        auto leftLayout = new QVBoxLayout;
+        bottomLayout->addLayout(leftLayout);
+
+        auto rightLayout = new QVBoxLayout;
+        bottomLayout->addLayout(rightLayout);
 
         // Load two WSIs
         m_WSIs = {
@@ -50,7 +60,7 @@ namespace fast {
         for(int i = 0; i < m_WSIs.size(); ++i) {
             auto button = new QPushButton;
             button->setText("Select WSI " + QString::number(i));
-            layout->addWidget(button);
+            leftLayout->addWidget(button);
             QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::selectWSI, this, i));
         }
 
@@ -60,14 +70,14 @@ namespace fast {
             auto button = new QPushButton;
             auto pipeline = Pipeline(join(pipelineFolder, filename));
             button->setText(("Run pipeline: " + pipeline.getName()).c_str());
-            layout->addWidget(button);
+            rightLayout->addWidget(button);
             QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::processPipeline, this, join(pipelineFolder, filename)));
         }
 
         // Stop button
         auto stopButton = new QPushButton;
         stopButton->setText("Stop");
-        layout->addWidget(stopButton);
+        leftLayout->addWidget(stopButton);
         QObject::connect(stopButton, &QPushButton::clicked, this, &GUI::stop);
 
         // Notify GUI when pipeline has finished
