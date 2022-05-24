@@ -24,6 +24,8 @@ namespace fast {
         std::vector<ImagePyramid::pointer> m_WSIs;
         int m_currentWSI = 0;
         bool m_procesessing = false;
+        bool m_batchProcesessing = false;
+        std::unique_ptr<Pipeline> m_runningPipeline;
     };
 
     // Function for loading a test WSI
@@ -67,11 +69,17 @@ namespace fast {
         // Load pipelines and create one button for each.
         std::string pipelineFolder = std::string(ROOT_DIR) + "/pipelines/";
         for(auto& filename : getDirectoryList(pipelineFolder)) {
-            auto button = new QPushButton;
             auto pipeline = Pipeline(join(pipelineFolder, filename));
-            button->setText(("Run pipeline: " + pipeline.getName()).c_str());
+
+            auto button = new QPushButton;
+            button->setText(("Run: " + pipeline.getName()).c_str());
             rightLayout->addWidget(button);
             QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::processPipeline, this, join(pipelineFolder, filename)));
+
+            auto batchButton = new QPushButton;
+            batchButton->setText(("Run for all: " + pipeline.getName()).c_str());
+            rightLayout->addWidget(batchButton);
+            QObject::connect(batchButton, &QPushButton::clicked, std::bind(&GUI::batchProcessPipeline, this, join(pipelineFolder, filename)));
         }
 
         // Stop button
@@ -96,12 +104,26 @@ namespace fast {
     }
 
     void GUI::stop() {
+        m_batchProcesessing = false;
         stopProcessing();
         selectWSI(m_currentWSI);
     }
 
     void GUI::done() {
-        if(m_procesessing) {
+        if(m_batchProcesessing) {
+            if(m_currentWSI == m_WSIs.size()-1) {
+                // All processed. Stop.
+                m_batchProcesessing = false;
+                m_procesessing = false;
+                QMessageBox msgBox;
+                msgBox.setText("Batch processing is done!");
+                msgBox.exec();
+            } else {
+                // Run next
+                m_currentWSI += 1;
+                processPipeline(m_runningPipeline->getFilename());
+            }
+        } else if(m_procesessing) {
             QMessageBox msgBox;
             msgBox.setText("Processing is done!");
             msgBox.exec();
@@ -118,14 +140,16 @@ namespace fast {
 
         // Load pipeline and give it a WSI
         std::cout << "Loading pipeline.. thread: " << std::this_thread::get_id() << std::endl;
-        auto pipeline = Pipeline(pipelinePath);
+        m_runningPipeline = std::make_unique<Pipeline>(pipelinePath);
         std::cout << "OK" << std::endl;
         // parse() only accepts POs for now, so use EmptyProcessObject to give it the WSI
         std::cout << "OK" << std::endl;
         try {
-            pipeline.parse({{"WSI", m_WSIs[m_currentWSI]}});
+            m_runningPipeline->parse({{"WSI", m_WSIs[m_currentWSI]}});
         } catch(Exception &e) {
             m_procesessing = false;
+            m_batchProcesessing = false;
+            m_runningPipeline.reset();
             // Syntax error in pipeline file. Raise error and return to avoid crash.
             QMessageBox msgBox;
             std::string msg = "Error parsing pipeline! " + std::string(e.what());
@@ -135,12 +159,18 @@ namespace fast {
         }
         std::cout << "Done" << std::endl;
 
-        for(auto renderer : pipeline.getRenderers()) {
+        for(auto renderer : m_runningPipeline->getRenderers()) {
             view->addRenderer(renderer);
         }
         view->reinitialize();
         //compThread->start();
         getComputationThread()->reset();
+    }
+
+    void GUI::batchProcessPipeline(std::string pipelineFilename) {
+        m_currentWSI = 0;
+        m_batchProcesessing = true;
+        processPipeline(pipelineFilename);
     }
 
     void GUI::selectWSI(int i) {
