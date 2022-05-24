@@ -3,41 +3,31 @@
 #include <FAST/Tools/CommandLineParser.hpp>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <QMessageBox>
 #include <FAST/Importers/WholeSlideImageImporter.hpp>
+#include <FAST/Visualization/ImagePyramidRenderer/ImagePyramidRenderer.hpp>
 #include <FAST/Data/ImagePyramid.hpp>
 
 namespace fast {
-
-    // Used as a trick since Pipeline::parse doesn't accept data objects, just process objects for now..
-    class EmptyProcessObject : public ProcessObject {
-        FAST_OBJECT_V4(EmptyProcessObject)
-        public:
-            FAST_CONSTRUCTOR(EmptyProcessObject, DataObject::pointer, data,)
-        private:
-            void execute() {
-                addOutputData(0, mData);
-            };
-            DataObject::pointer mData;
-    };
-
-    EmptyProcessObject::EmptyProcessObject(DataObject::pointer data) {
-        createOutputPort<DataObject>(0);
-        mData = data;
-        mIsModified = true;
-    };
-
     // Make a tiny GUI
     class GUI : public Window {
         FAST_OBJECT(GUI)
     public:
         FAST_CONSTRUCTOR(GUI);
-		int m_counter = 0;// Used to switch between the two WSIs
+		void done();
+		void stop();
+		void stopProcessing();
+        void selectWSI(int i);
+		void processPipeline(std::string pipelinePath);
     private:
+        std::vector<ImagePyramid::pointer> m_WSIs;
+        int m_currentWSI = 0;
+        bool m_procesessing = false;
     };
 
     // Function for loading a test WSI
-    static ImagePyramid::pointer loadWSI() {
-        auto importer = WholeSlideImageImporter::create(Config::getTestDataPath() + "WSI/A05.svs");
+    static ImagePyramid::pointer loadWSI(std::string filename) {
+        auto importer = WholeSlideImageImporter::create(filename);
         return importer->runAndGetOutputData<ImagePyramid>();
     }
 
@@ -48,43 +38,115 @@ namespace fast {
 
         // Initial empty view
         auto view = createView();
-        view->setSynchronizedRendering(false);
         layout->addWidget(view);
 
         // Load two WSIs
-        std::vector<ImagePyramid::pointer> WSIs = {loadWSI(), loadWSI()};
+        m_WSIs = {
+                loadWSI(Config::getTestDataPath() + "WSI/A05.svs"),
+                loadWSI("/home/smistad/data/FastPathology/WSIs/7.vsi"),
+                loadWSI("/home/smistad/data/FastPathology/WSIs/11435_CD3.ndpi")
+        };
+        for(int i = 0; i < m_WSIs.size(); ++i) {
+            auto button = new QPushButton;
+            button->setText("Select WSI " + QString::number(i));
+            layout->addWidget(button);
+            QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::selectWSI, this, i));
+        }
 
-        // A button to trigger event
-        auto button = new QPushButton;
-        button->setText("Click me!");
-        layout->addWidget(button);
+        // A set of pipeliens and one button for each.
+        std::vector<std::string> pipelines = {
+            std::string(ROOT_DIR) + "/pipelines/wsi_patch_segmentation.fpl",
+            std::string(ROOT_DIR) + "/pipelines/nuclei_seg_stream_wsi.fpl",
+            std::string(ROOT_DIR) + "/pipelines/bach-pw-classification-mobilenetv2.fpl",
+            std::string(ROOT_DIR) + "/pipelines/CD3_UNET_256.fpl",
+            std::string(ROOT_DIR) + "/pipelines/object_detection_nuclei_tiny_yolo_v3.fpl",
+            std::string(ROOT_DIR) + "/pipelines/wsi_p2.fpl",
+        };
 
-        // Every time the button is clicked:
-        QObject::connect(button, &QPushButton::clicked, [this, WSIs]() {
-            // Get old view, and remove it from Widget
-            auto oldView = getView(0);
-            oldView->stopPipeline();
-            oldView->removeAllRenderers();
+        for(int i = 0; i < pipelines.size(); ++i){
+            auto button = new QPushButton;
+            button->setText("Process with pipeline " + QString::number(i));
+            layout->addWidget(button);
+            QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::processPipeline, this, pipelines[i]));
+        }
 
-            // Load pipeline and give it a WSI
-            std::cout << "Loading pipeline.. thread:" << std::this_thread::get_id() << std::endl;
-            auto pipeline = Pipeline(std::string(ROOT_DIR) + "/wsi_patch_segmentation.fpl");
-            std::cout << "OK" << std::endl;
-            // parse() only accepts POs for now, so use EmptyProcessObject to give it the WSI
-            std::cout << "Counter: " << m_counter % 2 << " " << WSIs.size() << std::endl;
-            std::cout << "OK" << std::endl;
-            pipeline.parse({{"WSI", WSIs[m_counter % 2]}});
-            std::cout << "Done" << std::endl;
-            ++m_counter;
-            // Get all renderers
-            for(auto renderer : pipeline.getRenderers()) {
-                renderer->setSynchronizedRendering(false); // Disable synchronized rendering
-            }
-            for(auto renderer : pipeline.getRenderers()) {
-                oldView->addRenderer(renderer);
-            }
-            oldView->reinitialize();
-        });
+        // Stop button
+        auto stopButton = new QPushButton;
+        stopButton->setText("Stop");
+        layout->addWidget(stopButton);
+        QObject::connect(stopButton, &QPushButton::clicked, this, &GUI::stop);
+
+        // Notify GUI when pipeline has finished
+        QObject::connect(getComputationThread().get(), &ComputationThread::pipelineFinished, this, &GUI::done);
+    }
+
+    void GUI::stopProcessing() {
+        m_procesessing = false;
+        auto view = getView(0);
+        std::cout << "stopping pipeline" << std::endl;
+        view->stopPipeline();
+        std::cout << "done" << std::endl;
+        std::cout << "removing renderers.." << std::endl;
+        view->removeAllRenderers();
+        std::cout << "done" << std::endl;
+    }
+
+    void GUI::stop() {
+        stopProcessing();
+        selectWSI(m_currentWSI);
+    }
+
+    void GUI::done() {
+        if(m_procesessing) {
+            QMessageBox msgBox;
+            msgBox.setText("Processing is done!");
+            msgBox.exec();
+        }
+        m_procesessing = false;
+        // TODO Save any pipeline output data to disk.
+    }
+
+    void GUI::processPipeline(std::string pipelinePath) {
+        std::cout << "Processing pipeline: " << pipelinePath << std::endl;
+        stopProcessing();
+        m_procesessing = true;
+        auto view = getView(0);
+
+        // Load pipeline and give it a WSI
+        std::cout << "Loading pipeline.. thread: " << std::this_thread::get_id() << std::endl;
+        auto pipeline = Pipeline(pipelinePath);
+        std::cout << "OK" << std::endl;
+        // parse() only accepts POs for now, so use EmptyProcessObject to give it the WSI
+        std::cout << "OK" << std::endl;
+        try {
+            pipeline.parse({{"WSI", m_WSIs[m_currentWSI]}});
+        } catch(Exception &e) {
+            m_procesessing = false;
+            // Syntax error in pipeline file. Raise error and return to avoid crash.
+            QMessageBox msgBox;
+            std::string msg = "Error parsing pipeline! " + std::string(e.what());
+            msgBox.setText(msg.c_str());
+            msgBox.exec();
+            return;
+        }
+        std::cout << "Done" << std::endl;
+
+        for(auto renderer : pipeline.getRenderers()) {
+            view->addRenderer(renderer);
+        }
+        view->reinitialize();
+        //compThread->start();
+        getComputationThread()->reset();
+    }
+
+    void GUI::selectWSI(int i) {
+        stopProcessing();
+        m_currentWSI = i;
+        auto view = getView(0);
+        view->removeAllRenderers();
+        auto renderer = ImagePyramidRenderer::create()->connect(m_WSIs[m_currentWSI]);
+        view->addRenderer(renderer);
+        view->reinitialize();
     }
 }
 
