@@ -212,7 +212,7 @@ namespace fast {
                         ->connect(data.second);
                 exporter->run();
             } else if(dataTypeName == "Tensor") {
-                const std::string saveFilename = join(saveFolder, data.first + ".hd5");
+                const std::string saveFilename = join(saveFolder, data.first + ".hdf5");
                 auto exporter = HDF5TensorExporter::create(saveFilename)
                         ->connect(data.second);
                 exporter->run();
@@ -240,9 +240,10 @@ namespace fast {
                     auto importer = MetaImageImporter::create(path);
                     auto renderer = SegmentationRenderer::create()->connect(importer);
                     view->addRenderer(renderer);
-                } else if(extension == ".hd5") {
+                } else if(extension == ".hdf5") {
                     auto importer = HDF5TensorImporter::create(path);
                     auto renderer = HeatmapRenderer::create()->connect(importer);
+                    renderer->setInterpolation(false);
                     view->addRenderer(renderer);
                 }
             }
