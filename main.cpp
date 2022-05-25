@@ -54,14 +54,10 @@ namespace fast {
         auto rightLayout = new QVBoxLayout;
         bottomLayout->addLayout(rightLayout);
 
-        // Load two WSIs
-        m_WSIs = {
-                loadWSI(Config::getTestDataPath() + "WSI/A05.svs"),
-                loadWSI("/home/smistad/data/FastPathology/WSIs/7.vsi"),
-                loadWSI("/home/smistad/data/FastPathology/WSIs/11435_CD3.ndpi")
-        };
+        // Load WSIs from folder
         std::string imageFolder = join(ROOT_DIR, "images");
         for(auto filename : getDirectoryList(imageFolder)) {
+            if(filename == ".gitkeep") continue;
             m_WSIs.push_back(loadWSI(join(imageFolder, filename)));
             auto button = new QPushButton;
             button->setText(("Select " + filename).c_str());
@@ -142,9 +138,8 @@ namespace fast {
         auto view = getView(0);
 
         // Load pipeline and give it a WSI
-        std::cout << "Loading pipeline.. thread: " << std::this_thread::get_id() << std::endl;
+        std::cout << "Loading pipeline in thread: " << std::this_thread::get_id() << std::endl;
         m_runningPipeline = std::make_unique<Pipeline>(pipelinePath);
-        std::cout << "OK" << std::endl;
         std::cout << "OK" << std::endl;
         try {
             m_runningPipeline->parse({{"WSI", m_WSIs[m_currentWSI]}});
