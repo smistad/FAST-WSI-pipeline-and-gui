@@ -6,9 +6,14 @@
 #include <QMessageBox>
 #include <FAST/Importers/WholeSlideImageImporter.hpp>
 #include <FAST/Visualization/ImagePyramidRenderer/ImagePyramidRenderer.hpp>
+#include <FAST/Visualization/SegmentationRenderer/SegmentationRenderer.hpp>
+#include <FAST/Visualization/HeatmapRenderer/HeatmapRenderer.hpp>
 #include <FAST/Data/ImagePyramid.hpp>
+#include <FAST/Importers/TIFFImagePyramidImporter.hpp>
 #include <FAST/Exporters/TIFFImagePyramidExporter.hpp>
+#include <FAST/Importers/MetaImageImporter.hpp>
 #include <FAST/Exporters/MetaImageExporter.hpp>
+#include <FAST/Importers/HDF5TensorImporter.hpp>
 #include <FAST/Exporters/HDF5TensorExporter.hpp>
 
 namespace fast {
@@ -21,6 +26,7 @@ namespace fast {
 		void stop();
 		void stopProcessing();
         void selectWSI(int i);
+        void loadResults(int i);
 		void processPipeline(std::string pipelinePath);
 		void batchProcessPipeline(std::string pipelinePath);
 		void saveResults();
@@ -67,6 +73,11 @@ namespace fast {
             button->setText(("Select " + filename).c_str());
             leftLayout->addWidget(button);
             QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::selectWSI, this, m_WSIs.size()-1));
+
+            auto buttonLoad = new QPushButton;
+            buttonLoad->setText(("Load results for " + filename).c_str());
+            leftLayout->addWidget(buttonLoad);
+            QObject::connect(buttonLoad, &QPushButton::clicked, std::bind(&GUI::loadResults, this, m_WSIs.size()-1));
         }
 
         // Load pipelines and create one button for each.
@@ -207,6 +218,33 @@ namespace fast {
                 exporter->run();
             } else {
                 std::cout << "Unsupported data to export " << dataTypeName << std::endl;
+            }
+        }
+    }
+
+    void GUI::loadResults(int i) {
+        selectWSI(i);
+        auto view = getView(0);
+        // Load any results for current WSI
+        const std::string saveFolder = join(ROOT_DIR, "results", m_WSIs[m_currentWSI].first);
+        for(auto pipelineName : getDirectoryList(saveFolder, false, true)) {
+            const std::string folder = join(saveFolder, pipelineName);
+            for(auto filename : getDirectoryList(folder, true, false)) {
+                const std::string path = join(folder, filename);
+                const std::string extension = filename.substr(filename.rfind('.'));
+                if(extension == ".tiff") {
+                    auto importer = TIFFImagePyramidImporter::create(path);
+                    auto renderer = SegmentationRenderer::create()->connect(importer);
+                    view->addRenderer(renderer);
+                } else if(extension == ".mhd") {
+                    auto importer = MetaImageImporter::create(path);
+                    auto renderer = SegmentationRenderer::create()->connect(importer);
+                    view->addRenderer(renderer);
+                } else if(extension == ".hd5") {
+                    auto importer = HDF5TensorImporter::create(path);
+                    auto renderer = HeatmapRenderer::create()->connect(importer);
+                    view->addRenderer(renderer);
+                }
             }
         }
     }
