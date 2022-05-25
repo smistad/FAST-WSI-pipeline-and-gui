@@ -1,5 +1,7 @@
 PipelineName "André P2"
 PipelineDescription "asd"
+PipelineInputData WSI "Whole-slide image"
+PipelineOutputData segmentation refinement 0
 
 ### Processing chain
 

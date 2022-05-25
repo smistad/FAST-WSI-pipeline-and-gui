@@ -1,6 +1,7 @@
 PipelineName "Dummy"
 PipelineDescription "Simple demo pipeline of patch-wise segmentation of a WSI"
 PipelineInputData WSI "Whole-slide image"
+PipelineOutputData segmentation stitcher 0
 
 ### Processing chain
 

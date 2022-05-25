@@ -7,6 +7,9 @@
 #include <FAST/Importers/WholeSlideImageImporter.hpp>
 #include <FAST/Visualization/ImagePyramidRenderer/ImagePyramidRenderer.hpp>
 #include <FAST/Data/ImagePyramid.hpp>
+#include <FAST/Exporters/TIFFImagePyramidExporter.hpp>
+#include <FAST/Exporters/MetaImageExporter.hpp>
+#include <FAST/Exporters/HDF5TensorExporter.hpp>
 
 namespace fast {
     // Make a tiny GUI
@@ -20,8 +23,9 @@ namespace fast {
         void selectWSI(int i);
 		void processPipeline(std::string pipelinePath);
 		void batchProcessPipeline(std::string pipelinePath);
+		void saveResults();
     private:
-        std::vector<ImagePyramid::pointer> m_WSIs;
+        std::vector<std::pair<std::string, ImagePyramid::pointer>> m_WSIs;
         int m_currentWSI = 0;
         bool m_procesessing = false;
         bool m_batchProcesessing = false;
@@ -58,7 +62,7 @@ namespace fast {
         std::string imageFolder = join(ROOT_DIR, "images");
         for(auto filename : getDirectoryList(imageFolder)) {
             if(filename == ".gitkeep") continue;
-            m_WSIs.push_back(loadWSI(join(imageFolder, filename)));
+            m_WSIs.push_back({filename, loadWSI(join(imageFolder, filename))});
             auto button = new QPushButton;
             button->setText(("Select " + filename).c_str());
             leftLayout->addWidget(button);
@@ -109,6 +113,8 @@ namespace fast {
     }
 
     void GUI::done() {
+        if(m_procesessing)
+            saveResults();
         if(m_batchProcesessing) {
             if(m_currentWSI == m_WSIs.size()-1) {
                 // All processed. Stop.
@@ -120,15 +126,15 @@ namespace fast {
             } else {
                 // Run next
                 m_currentWSI += 1;
+                std::cout << "Processing WSI " << m_currentWSI << std::endl;
                 processPipeline(m_runningPipeline->getFilename());
             }
         } else if(m_procesessing) {
             QMessageBox msgBox;
             msgBox.setText("Processing is done!");
             msgBox.exec();
+            m_procesessing = false;
         }
-        m_procesessing = false;
-        // TODO Save any pipeline output data to disk.
     }
 
     void GUI::processPipeline(std::string pipelinePath) {
@@ -142,7 +148,7 @@ namespace fast {
         m_runningPipeline = std::make_unique<Pipeline>(pipelinePath);
         std::cout << "OK" << std::endl;
         try {
-            m_runningPipeline->parse({{"WSI", m_WSIs[m_currentWSI]}});
+            m_runningPipeline->parse({{"WSI", m_WSIs[m_currentWSI].second}});
         } catch(Exception &e) {
             m_procesessing = false;
             m_batchProcesessing = false;
@@ -173,8 +179,36 @@ namespace fast {
         m_currentWSI = i;
         auto view = getView(0);
         view->removeAllRenderers();
-        auto renderer = ImagePyramidRenderer::create()->connect(m_WSIs[m_currentWSI]);
+        auto renderer = ImagePyramidRenderer::create()->connect(m_WSIs[m_currentWSI].second);
         view->addRenderer(renderer);
+    }
+
+    void GUI::saveResults() {
+        auto pipelineData = m_runningPipeline->getAllPipelineOutputData();
+        for(auto data : pipelineData) {
+            const std::string dataTypeName = data.second->getNameOfClass();
+            const std::string saveFolder = join(ROOT_DIR, "results", m_WSIs[m_currentWSI].first, m_runningPipeline->getName());
+            createDirectories(saveFolder);
+            std::cout << "Saving " << dataTypeName << " data to " << saveFolder << std::endl;
+            if(dataTypeName == "ImagePyramid") {
+                const std::string saveFilename = join(saveFolder, data.first + ".tiff");
+                auto exporter = TIFFImagePyramidExporter::create(saveFilename)
+                        ->connect(data.second);
+                exporter->run();
+            } else if(dataTypeName == "Image") {
+                const std::string saveFilename = join(saveFolder, data.first + ".mhd");
+                auto exporter = MetaImageExporter::create(saveFilename)
+                        ->connect(data.second);
+                exporter->run();
+            } else if(dataTypeName == "Tensor") {
+                const std::string saveFilename = join(saveFolder, data.first + ".hd5");
+                auto exporter = HDF5TensorExporter::create(saveFilename)
+                        ->connect(data.second);
+                exporter->run();
+            } else {
+                std::cout << "Unsupported data to export " << dataTypeName << std::endl;
+            }
+        }
     }
 }
 

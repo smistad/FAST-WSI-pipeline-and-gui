@@ -1,5 +1,7 @@
 PipelineName "CD3 UNET"
 PipelineDescription "asd"
+PipelineInputData WSI "Whole-slide image"
+PipelineOutputData segmentation stitcher 0
 
 ### Processing chain
 ProcessObject tissueSeg TissueSegmentation

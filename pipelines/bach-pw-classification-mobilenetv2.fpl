@@ -1,6 +1,6 @@
 PipelineName "Bach Classification"
 PipelineDescription "asd"
-
+PipelineInputData WSI "Whole-slide image"
 PipelineOutputData heatmap stitcher 0
 
 ### Processing chain

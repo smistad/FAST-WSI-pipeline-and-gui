@@ -1,4 +1,5 @@
 models/*
 images/*
+results/*
 .idea
 cmake-build*

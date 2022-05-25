@@ -1,6 +1,7 @@
 PipelineName "Tissue segmentation"
 PipelineDescription "Tissue segmentation"
 PipelineInputData WSI "Whole-slide image"
+PipelineOutputData segmentation segmentation 0
 
 ### Processing chain
 

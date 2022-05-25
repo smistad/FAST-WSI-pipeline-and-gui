@@ -1,5 +1,7 @@
 PipelineName "Nuclei bounding box detection"
 PipelineDescription "asd"
+PipelineInputData WSI "Whole-slide image"
+PipelineOutputData boxes boxAccum 0
 
 ### Processing chain
 ProcessObject tissueSeg TissueSegmentation
