@@ -42,6 +42,7 @@ namespace fast {
 
         // Create view
         auto view = createView();
+        view->setAutoUpdateCamera(true);
         layout->addWidget(view);
 
         auto bottomLayout = new QHBoxLayout;
@@ -161,7 +162,6 @@ namespace fast {
         for(auto renderer : m_runningPipeline->getRenderers()) {
             view->addRenderer(renderer);
         }
-        view->reinitialize();
         getComputationThread()->reset();
     }
 
@@ -178,7 +178,6 @@ namespace fast {
         view->removeAllRenderers();
         auto renderer = ImagePyramidRenderer::create()->connect(m_WSIs[m_currentWSI]);
         view->addRenderer(renderer);
-        view->reinitialize();
     }
 }
 
