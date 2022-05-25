@@ -60,11 +60,13 @@ namespace fast {
                 loadWSI("/home/smistad/data/FastPathology/WSIs/7.vsi"),
                 loadWSI("/home/smistad/data/FastPathology/WSIs/11435_CD3.ndpi")
         };
-        for(int i = 0; i < m_WSIs.size(); ++i) {
+        std::string imageFolder = join(ROOT_DIR, "images");
+        for(auto filename : getDirectoryList(imageFolder)) {
+            m_WSIs.push_back(loadWSI(join(imageFolder, filename)));
             auto button = new QPushButton;
-            button->setText("Select WSI " + QString::number(i));
+            button->setText(("Select " + filename).c_str());
             leftLayout->addWidget(button);
-            QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::selectWSI, this, i));
+            QObject::connect(button, &QPushButton::clicked, std::bind(&GUI::selectWSI, this, m_WSIs.size()-1));
         }
 
         // Load pipelines and create one button for each.

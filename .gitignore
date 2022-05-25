@@ -1,0 +1,4 @@
+models/*
+images/*
+.idea
+cmake-build*
