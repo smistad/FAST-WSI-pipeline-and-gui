@@ -81,12 +81,6 @@ GUI::GUI() {
 		});
 	}
 
-	// Stop button
-	auto stopButton = new QPushButton;
-	stopButton->setText("Stop");
-	leftLayout->addWidget(stopButton);
-	QObject::connect(stopButton, &QPushButton::clicked, this, &GUI::stop);
-
 	// Notify GUI when pipeline has finished
 	QObject::connect(getComputationThread().get(), &ComputationThread::pipelineFinished, this, &GUI::done);
 
