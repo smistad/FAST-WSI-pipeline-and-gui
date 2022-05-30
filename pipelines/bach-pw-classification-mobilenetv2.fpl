@@ -11,7 +11,7 @@ Input 0 WSI
 
 ProcessObject patch PatchGenerator
 Attribute patch-size 512 512
-Attribute patch-level 1
+Attribute patch-magnification 40
 Attribute patch-overlap 0.0
 Attribute mask-threshold 0.05
 Input 0 WSI

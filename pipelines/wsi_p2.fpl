@@ -10,7 +10,7 @@ Input 0 WSI
 
 ProcessObject patch PatchGenerator
 Attribute patch-size 256 256
-Attribute patch-level 2
+Attribute patch-magnification 10
 Input 0 WSI
 Input 1 tissueSeg 0
 
