@@ -252,6 +252,14 @@ void GUI::saveResults() {
 		} else {
 			std::cout << "Unsupported data to export " << dataTypeName << std::endl;
 		}
+
+		// TODO handle multiple renderes somehow
+		std::ofstream file(join(saveFolder, "attributes.txt"), std::iostream::out);
+		for(auto renderer : m_runningPipeline->getRenderers()) {
+		    if(renderer->getNameOfClass() != "ImagePyramidRenderer")
+		        file << renderer->attributesToString();
+		}
+		file.close();
 	}
 }
 
@@ -265,21 +273,47 @@ void GUI::loadResults(int i) {
 		for(auto filename : getDirectoryList(folder, true, false)) {
 			const std::string path = join(folder, filename);
 			const std::string extension = filename.substr(filename.rfind('.'));
+			Renderer::pointer renderer;
 			if(extension == ".tiff") {
 				auto importer = TIFFImagePyramidImporter::create(path);
-				auto renderer = SegmentationRenderer::create()->connect(importer);
-				view->addRenderer(renderer);
+				renderer = SegmentationRenderer::create()->connect(importer);
 			} else if(extension == ".mhd") {
 				auto importer = MetaImageImporter::create(path);
-				auto renderer = SegmentationRenderer::create()->connect(importer);
-				view->addRenderer(renderer);
+				renderer = SegmentationRenderer::create()->connect(importer);
 			} else if(extension == ".hdf5") {
 				auto importer = HDF5TensorImporter::create(path);
-				auto renderer = HeatmapRenderer::create()->connect(importer);
-				renderer->setInterpolation(false);
-				view->addRenderer(renderer);
+				renderer = HeatmapRenderer::create()->connect(importer);
 			}
-		}
+			if(renderer) {
+			    // Read attributes from txt file
+			    std::ifstream file(join(folder, "attributes.txt"), std::iostream::in);
+			    if(!file.is_open())
+			        throw Exception("Error reading " + join(folder, "attributes.txt"));
+			    do {
+			        std::string line;
+			        std::getline(file, line);
+			        trim(line);
+			        std::cout << line << std::endl;
+
+			        std::vector<std::string> tokens = split(line);
+			        if(tokens[0] != "Attribute")
+			            break;
+
+			        if(tokens.size() < 3)
+			            throw Exception("Expecting at least 3 items on attribute line when parsing object " + renderer->getNameOfClass() + " but got " + line);
+
+			        std::string name = tokens[1];
+
+			        std::shared_ptr<Attribute> attribute = renderer->getAttribute(name);
+			        std::string attributeValues = line.substr(line.find(name) + name.size());
+			        trim(attributeValues);
+			        attribute->parseInput(attributeValues);
+			        reportInfo() << "Set attribute " << name << " to " << attributeValues  << " for object " << renderer->getNameOfClass() << reportEnd();
+			    } while(!file.eof());
+			    renderer->loadAttributes();
+                view->addRenderer(renderer);
+            }
+        }
 	}
 }
 

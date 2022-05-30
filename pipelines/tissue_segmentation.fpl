@@ -14,5 +14,7 @@ Renderer imgRenderer ImagePyramidRenderer
 Input 0 WSI
 
 Renderer segRenderer SegmentationRenderer
-Attribute opacity 0.5
+Attribute opacity 0.2
+Attribute border-opacity 0.5
+Attribute label-colors "1" "red"
 Input 0 segmentation 0
