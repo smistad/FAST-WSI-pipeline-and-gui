@@ -143,6 +143,8 @@ void GUI::stopProcessing() {
 }
 
 void GUI::stop() {
+    if(m_progressDialog)
+        m_progressDialog->setValue(m_progressDialog->maximum()); // Close progress dialog
 	m_batchProcesessing = false;
 	stopProcessing();
 	selectWSI(m_currentWSI);
